@@ -18,6 +18,7 @@ import Foundation
 /// handles our input parseing to
 fileprivate class InputParser {
 	
+	/// called to attempt to handle the input console
 	public func routeInput(input: String) -> String {
 		/// Now lets parse the input to our minicron class to handle the data
 		do {
@@ -31,6 +32,7 @@ fileprivate class InputParser {
 	}
 }
 
+/// very quick validation to stop us getting into anything complex with obvious fails
 private func doesInputAppearValid(input: String) -> String {
 	/// Handle no input
 	guard input != "" else {
@@ -44,6 +46,7 @@ private func doesInputAppearValid(input: String) -> String {
 	return input
 }
 
+/// our minicron class that houses the function to handle the inputs
 fileprivate class MiniCron {
 	/// cat input.txt | swift main.swift HH:MM --> Example to remember
 
@@ -131,6 +134,8 @@ fileprivate class MiniCron {
 	}
 	
 }
+
+/// Error Types to be thrown
 enum ErrorTypes: Error {
 	case HourInputFile
 	case MinutesInputFile
@@ -141,6 +146,7 @@ enum ErrorTypes: Error {
 	case MustIncludeSpaces
 }
 
+/// extend and add desc on errorTypes so we can still throw + give useful feedback
 extension ErrorTypes: CustomStringConvertible {
 	var description: String {
 		switch self {
@@ -215,6 +221,7 @@ extension MiniCron {
 	}
 }
 
+/// initiate our inputs and parse them
 while let userInput = readLine() {
 	/// early check if our input appears valid, saves us doing logic if we spot something missing
 	let input = doesInputAppearValid(input: userInput)
