@@ -21,7 +21,7 @@ fileprivate class InputParser {
 	public func routeInput(input: String) -> String {
 		/// Now lets parse the input to our minicron class to handle the data
 		do {
-			return (try MiniCron.splitInput(input: input))
+			return (try MiniCron.splitInputAndParse(input: input))
 		} catch let error as ErrorTypes {
 			print(error.description)
 		} catch {
@@ -71,13 +71,13 @@ fileprivate class MiniCron {
 		
 		/// checks the file inputs to make sure they're compliant with what we expect
 		/// Hours above or equal to 0, less than 24 or include an asterix
-		if !(Int(fileHours) ?? -1 >= 0 || Int(fileHours) ?? 25 < 24) || fileHours == "*" {
+		if !((Int(fileHours) ?? -1 >= 0 || Int(fileHours) ?? 25 < 24) || fileHours == "*") {
 			throw ErrorTypes.InvalidInput
 		}
 		
 		/// checks the file minute input to make sure they're compliant with what we expect
 		/// Minutes above or equal to 0, less than 60 or include an asterix
-		if !(Int(fileMinutes) ?? -1 >= 0 || Int(fileMinutes) ?? 61 < 60) || fileMinutes == "*" {
+		if !((Int(fileMinutes) ?? -1 >= 0 || Int(fileMinutes) ?? 61 < 60) || fileMinutes == "*") {
 			throw ErrorTypes.InvalidInput
 		}
 		
@@ -94,7 +94,7 @@ fileprivate class MiniCron {
 	}
 	
 	/// Here we need to split the input into useable chunks
-	static func splitInput(input: String) throws -> String {
+	static func splitInputAndParse(input: String) throws -> String {
 		
 		/// first get the time element from the file
 		let getTime = grabTimeFromInput()
@@ -124,7 +124,7 @@ fileprivate class MiniCron {
 		let hourFromFile = fileSideComps[1]
 		let BinPath = fileSideComps[2]
 		
-		/// lets run our validation checks
+		/// lets run our validation checks, these wont change any inputs just throw if wrong
 		try validation(fileMinutes: minutesFromFile, fileHours: hourFromFile,userInputMins: MinutesInput,userInputHours: HoursInput)
 		
 		return asterixResolver(hour: HoursInput, inputFilehours: hourFromFile, minutes: MinutesInput, inputFileMinutes: minutesFromFile) + " - " + BinPath
@@ -166,17 +166,17 @@ extension MiniCron {
 		if (inputFilehours == "*" && inputFileMinutes == "*") {
 			return "\(hour):\(minutes) today"
 		}
+		
 		/// Then deal with Just Hours having Asterix
 		else if (inputFilehours == "*" && inputFileMinutes != "*") {
 			return HourAstrix(hour: Int(hour)!, minutes: Int(minutes)!, inputFileMins: Int(inputFileMinutes)!)
 			
 		/// then deal with mins just having an astrix
 		} else if (inputFilehours != "*" && inputFileMinutes == "*") {
-			return "\(inputFilehours):00 " + MinutesAstrix(hour: Int(hour)!,inputFileHours: Int(inputFilehours)!)
+			return MinutesAstrix(hour: Int(hour)!,inputFileHours: Int(inputFilehours)!)
 			
 		/// otherwise we have no astrix lets just show what we expect
 		} else {
-//			return "\(inputFilehours):\(inputFileMinutes) " + TimeUtils.evaluateIsTodayWithHoursAndMin(Int(hour)!, Int(inputFilehours)!, Int(minutes)!, Int(inputFileMinutes)!)
 			var day = ""
 			if Int(hour)! > Int(inputFilehours)! {
 				day = "tomorrow"
@@ -215,15 +215,15 @@ extension MiniCron {
 	}
 }
 
-let userInput = readLine()
-
-/// early check if our input appears valid, saves us doing logic if we spot something missing
-let input = doesInputAppearValid(input: userInput ?? "")
-
-/// if our string matches the one we put in we know we are good to continue
-/// otherwise we log to customer
-if input == userInput {
-	print(InputParser().routeInput(input: input))
-} else {
-	print(input)
+while let userInput = readLine() {
+	/// early check if our input appears valid, saves us doing logic if we spot something missing
+	let input = doesInputAppearValid(input: userInput)
+	
+	/// if our string matches the one we put in we know we are good to continue
+	/// otherwise we log to customer
+	if input == userInput {
+		print(InputParser().routeInput(input: input))
+	} else {
+		print(input)
+	}
 }
