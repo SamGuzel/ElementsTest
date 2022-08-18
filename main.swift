@@ -24,11 +24,10 @@ public class InputParser {
 		do {
 			return (try MiniCron.splitInputAndParse(input: input))
 		} catch let error as ErrorTypes {
-			print(error.description)
+			return(error.description)
 		} catch {
-			print("Error occured, \(error)")
+			return("Error occured, \(error)")
 		}
-		return "Error Occured please confirm to cat input.txt | swift main.swift HH:MM"
 	}
 }
 
@@ -253,7 +252,14 @@ while let userInput = readLine() {
 	/// if our string matches the one we put in we know we are good to continue
 	/// otherwise we log to customer
 	if input == userInput {
-		print(InputParser().routeInput(input: input))
+		let output = (InputParser().routeInput(input: input))
+		/// if we get an error we dont want duplicate logs
+		if !output.contains("Error") {
+			print(output)
+		} else {
+			print(output)
+			break
+		}
 	} else {
 		print(input)
 	}
