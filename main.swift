@@ -12,8 +12,8 @@ import Foundation
 /// 1) Workout how to Handle Input from Console  -- 15 mins
 /// 2) Handle LHS of cat input.txt | swift main.swift HH:MM -- 30 mins
 /// 3) Handle RHS HH:MM -- 30 mins
-/// 4) Validation -- 25 mins --> Ran out of time
-/// 5) UnitTests if have Time -- 15mins --> Ran out of time
+/// 4) Validation -- 25 mins
+/// 5) UnitTests if have Time -- 15mins --> Ran out of time to add more
 
 /// handles our input parseing to
 public class InputParser {
