@@ -16,7 +16,7 @@ import Foundation
 /// 5) UnitTests if have Time -- 15mins --> Ran out of time
 
 /// handles our input parseing to
-fileprivate class InputParser {
+public class InputParser {
 	
 	/// called to attempt to handle the input console
 	public func routeInput(input: String) -> String {
@@ -33,15 +33,19 @@ fileprivate class InputParser {
 }
 
 /// very quick validation to stop us getting into anything complex with obvious fails
-private func doesInputAppearValid(input: String) -> String {
+public func doesInputAppearValid(input: String) -> String {
 	/// Handle no input
 	guard input != "" else {
-		return "Please ensure to read the readme.txt for input details"
+		return ErrorTypes.EmptyInput.description
 	}
 
 	/// early protection if we're missing anything key
-	if input.isEmpty, !input.contains("|"), !input.contains("cat input.txt "), !input.contains("swift main.swift") {
-			return "Please Input Something in the form of 'cat input.txt | swift main.swift HH:MM'"
+	if input.isEmpty, !input.contains("cat") {
+		return ErrorTypes.UserInputError.description
+	}
+	let counter = input.split(separator: " ")
+	if counter.count != 3 {
+		return ErrorTypes.InputFileError.description
 	}
 	return input
 }
@@ -59,7 +63,6 @@ fileprivate class MiniCron {
 	
 	/// Grab the two last two Arguments [main.swift, HH:MM]
 	static func grabTimeFromInput() -> String {
-		
 		/// theres a chance we may not have been provided with the HH:MM so first check if we get two arguments and if not return the current time in HH:mm format
 		if CommandLine.arguments.count < 2 {
 			return GetDateNow()
@@ -110,27 +113,36 @@ fileprivate class MiniCron {
 		}
 		
 		/// HH
-		let HoursInput = hourMins[0]
+		var hoursInput = hourMins[0]
+		
+		/// if we've been sent 1:20 we turn it to 01:20
+		if hoursInput.count == 1 {
+			hoursInput = "0\(hoursInput)"
+		}
 		
 		/// MM
-		let MinutesInput = hourMins[1]
+		let minutesInput = hourMins[1]
 		
+		/// if we've been sent H:m we cant tell if the user wanted 0m or m0 so error
+		if minutesInput.count == 1 {
+			throw ErrorTypes.OneDigitInputMins
+		}
 		/// now lets seperate out the file side of it
 		/// example: ["30", "1", "/bin/run_me_daily\\"]
 		let fileSideComps = input.components(separatedBy: " ")
-		
-		if fileSideComps.count > 3 {
+		if fileSideComps.count != 3 {
 			throw ErrorTypes.MustIncludeSpaces
 		}
 		/// seperate our three params in Minutes Hours and Bin Pat
 		let minutesFromFile = fileSideComps[0]
 		let hourFromFile = fileSideComps[1]
+		
 		let BinPath = fileSideComps[2]
 		
 		/// lets run our validation checks, these wont change any inputs just throw if wrong
-		try validation(fileMinutes: minutesFromFile, fileHours: hourFromFile,userInputMins: MinutesInput,userInputHours: HoursInput)
+		try validation(fileMinutes: minutesFromFile, fileHours: hourFromFile,userInputMins: minutesInput,userInputHours: hoursInput)
 		
-		return asterixResolver(hour: HoursInput, inputFilehours: hourFromFile, minutes: MinutesInput, inputFileMinutes: minutesFromFile) + " - " + BinPath
+		return workoutAtrix(hour: hoursInput, inputFilehours: hourFromFile, minutes: minutesInput, inputFileMinutes: minutesFromFile) + " - " + BinPath
 	}
 	
 }
@@ -141,22 +153,30 @@ enum ErrorTypes: Error {
 	case MinutesInputFile
 	case MustIncludeSemiColon
 	case HourUserInput
+	case UserInputError
 	case InvalidInput
 	case MinUserInput
+	case OneDigitInputMins
 	case MustIncludeSpaces
+	case EmptyInput
+	case InputFileError
 }
 
 /// extend and add desc on errorTypes so we can still throw + give useful feedback
 extension ErrorTypes: CustomStringConvertible {
 	var description: String {
 		switch self {
-		case .MinUserInput: return "Minutes that were input did not conform to HH:mm"
-		case .HourUserInput: return "Hours that were input did not conform to HH:mm"
-		case .HourInputFile: return "Input file either not found or incorrect, could not get Hours"
-		case .MinutesInputFile: return "Input file either not found or incorrect, could not get minutes"
-		case .MustIncludeSemiColon: return "There must be a : between your HH:mm at the end of the log"
-		case .MustIncludeSpaces: return "Must have spaces between the schedule components e.g Hour-space-Minutes-space-BinFile"
-		case .InvalidInput: return "Minutes must be max 60, Hours must be 24 max or asterixs in the Input.txt file"
+		case .MinUserInput: return "Error - Minutes that were input did not conform to HH:mm"
+		case .HourUserInput: return "Error - Hours that were input did not conform to HH:mm"
+		case .UserInputError: return "Error - Please Input Something in the form of 'cat input.txt | swift main.swift HH:MM"
+		case .HourInputFile: return "Error - Input file either not found or incorrect, could not get Hours"
+		case .MinutesInputFile: return "Error - Input file either not found or incorrect, could not get minutes"
+		case .InputFileError: return "Error - Input file error, needs 3 fields Hour Minutes BinFile"
+		case .MustIncludeSemiColon: return "Error - There must be a : between your HH:mm at the end of the log"
+		case .MustIncludeSpaces: return "Error - Must have spaces between the schedule components e.g Hour-space-Minutes-space-BinFile"
+		case .InvalidInput: return "Error - Minutes must be max 60, Hours must be 24 max or asterixs in the Input.txt file"
+		case .EmptyInput: return "Error - No Input, Please ensure to read the readme.txt for input details"
+		case .OneDigitInputMins: return "You've only given us HH:m / H:m and we need minimum H:mm"
 		}
 	}
 }
@@ -166,32 +186,36 @@ extension ErrorTypes: CustomStringConvertible {
 extension MiniCron {
 	
 	/// deal with our asterix's or a mixture of asterix's and inputs, we pass in mins and hours to make the text format easier to output
-	static func asterixResolver(hour: String, inputFilehours: String, minutes: String, inputFileMinutes: String) -> String {
-		
+	static func workoutAtrix(hour: String, inputFilehours: String, minutes: String, inputFileMinutes: String) -> String {
+		var fileHours = inputFilehours
+	
 		/// first deal with the easy case of both inputs having * as it basically needs to run for all
-		if (inputFilehours == "*" && inputFileMinutes == "*") {
+		if (fileHours == "*" && inputFileMinutes == "*") {
 			return "\(hour):\(minutes) today"
 		}
 		
 		/// Then deal with Just Hours having Asterix
-		else if (inputFilehours == "*" && inputFileMinutes != "*") {
+		else if (fileHours == "*" && inputFileMinutes != "*") {
 			return HourAstrix(hour: Int(hour)!, minutes: Int(minutes)!, inputFileMins: Int(inputFileMinutes)!)
 			
 		/// then deal with mins just having an astrix
-		} else if (inputFilehours != "*" && inputFileMinutes == "*") {
-			return MinutesAstrix(hour: Int(hour)!,inputFileHours: Int(inputFilehours)!)
+		} else if (fileHours != "*" && inputFileMinutes == "*") {
+			return MinutesAstrix(hour: Int(hour)!,inputFileHours: Int(fileHours)!)
 			
 		/// otherwise we have no astrix lets just show what we expect
 		} else {
+			if fileHours.count == 1 {
+				fileHours = "0\(fileHours)"
+			}
 			var day = ""
-			if Int(hour)! > Int(inputFilehours)! {
+			if Int(hour)! > Int(fileHours)! {
 				day = "tomorrow"
-			} else if (hour < inputFilehours){
+			} else if (hour < fileHours){
 				day = "today"
 			} else {
 				day = minutes > inputFileMinutes ? "tomorrow" : "today"
 			}
-			return "\(inputFilehours):\(inputFileMinutes) \(day)"
+			return "\(fileHours):\(inputFileMinutes) \(day)"
 		}
 	}
 	
